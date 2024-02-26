@@ -1,11 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js" integrity="sha384-Gr6Lu2Ajx28mzwyVR8CFkULdCU7kMlZ9UthllibdOSo6qAiN+yXNHqtgdTvFXMT4" crossorigin="anonymous"></script>
-    <script src="../tictoe/rooming.js"></script>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <script>
+        const roomId = "<%=roomId %>";
+    </script>
+  
     <style>
+
         body{
     background: #678983;
 }
@@ -98,7 +101,113 @@ button{
     </table>
     <div id="message"></div>
     <input id="url" onclick="copyToClip(event)" value="<%= roomId %>" readonly></input>
+    <script src="/socket.io/socket.io.js">
+       
+    </script>
+   <script type="text/javascript">
+   
+     const socket = io();
+    var varstatus=[0,0,0,0,0,0,0,0,0];
+    var moves=0;
+    var myclick;
+    var otherclick;
+    var enableclick = false;
+
+    var text = document.getElementById("url");
+function copyToClip(e){
     
+    var text = document.getElementById("url");
+text.select();
+document.execCommand("copy");
+e.target.value="Copied to clipboard"
+setTimeout(function() {
+    e.target.value = "<%=roomId%>";
+}, 1500);
+}
+
+
+socket.emit("join-room",roomId )
+socket.on("user-connected",()=>{
+    document.getElementById("message").innerHTML="User Connected"
+    myclick="X"
+    otherclick="O"
+    enableclick=true
+   socket.emit("can-play")
+    
+})
+socket.on("can-play",()=>{
+    myclick="O"
+    otherclick="X"
+    enableclick=true
+  
+})
+const clicked=(id)=>{
+    console.log(id)
+    if(enableclick){
+        moves++;
+        const element=document.getElementById(id);
+        element.innerHTML=myclick;
+        element.onclick=null;
+        socket.emit("clicked",id);
+        enableclick=false;
+        varstatus[id-1]=1
+        if ((varstatus[0] == 1 && varstatus[1] == 1 && varstatus[2] == 1)||
+        (varstatus[0] ==1 && varstatus[3] == 1 && varstatus[6] == 1)||
+        (varstatus[0] ==1 && varstatus[4] == 1 && varstatus[8] == 1)||
+        (varstatus[2] ==1 && varstatus[5] == 1 && varstatus[8] == 1)||
+        (varstatus[2] ==1 && varstatus[4] == 1 && varstatus[6] == 1)||
+        (varstatus[1] ==1 && varstatus[4] == 1 && varstatus[7] == 1)||
+        (varstatus[3] ==1 && varstatus[4] == 1 && varstatus[5] == 1)||
+        (varstatus[6] ==1 && varstatus[7] == 1 && varstatus[8] == 1)){
+
+            document.getElementById("message").innerHTML = "You win";
+            enableClick = false;
+            setTimeout(()=>{location.href='/';}, 2000);
+        }else if(moves==9){
+            document.getElementById("message").innerHTML = "It's a Draw";
+            setTimeout(()=>{location.href='/';}, 2000);
+        }
+    }
+}
+socket.on("clicked",(id)=>{
+moves+=1;
+
+        const element=document.getElementById(id);
+        element.innerHTML=otherclick;
+        element.onclick=null;
+      
+        enableclick=true;
+        varstatus[id-1]=2
+        if ((varstatus[0] == 1 && varstatus[1] == 2 && varstatus[2] == 2)||
+        (varstatus[0] ==2 && varstatus[3] == 2 && varstatus[6] == 2)||
+        (varstatus[0] ==2 && varstatus[4] == 2 && varstatus[8] == 2)||
+        (varstatus[2] ==2 && varstatus[5] == 2 && varstatus[8] == 2)||
+        (varstatus[2] ==2 && varstatus[4] == 2 && varstatus[6] == 2)||
+        (varstatus[1] ==2 && varstatus[4] == 2 && varstatus[7] == 2)||
+        (varstatus[3] ==2 && varstatus[4] == 2 && varstatus[5] == 2)||
+        (varstatus[6] ==2 && varstatus[7] == 2 && varstatus[8] == 2)){
+
+            document.getElementById("message").innerHTML = "I Lost";
+            enableClick = false;
+            setTimeout(()=>{location.href='/';}, 2000);
+        }else {
+            if(moves==9){
+            document.getElementById("message").innerHTML = "It's a Draw";
+            setTimeout(()=>{location.href='/';}, 2000);
+           }
+    }
+    
+})
+socket.on("full-room",()=>{
+    document.getElementById("message").innerHTML="Room is full...."
+    setTimeout(()=>{location.href='/';}, 2000);
+})
+socket.on("user-disconnected",()=>{
+    document.getElementById("message").innerHTML="User disconnected"
+    setTimeout(()=>{location.href='/';}, 2000);
+})
+   </script>
+
     </body>
   
 </html>

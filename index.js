@@ -1,37 +1,64 @@
+// server.js
 import { Server } from "socket.io";
-import {createServer} from "http"
-import  express from "express";
+import { createServer } from "http";
+import express from "express";
 import path from "path";
-import { v4 } from "uuid";
+import { v4 as uuidv4 } from "uuid";
 
-const app=express();
-const server=createServer(app);
-const io=new Server(server);
+const app = express();
+const server = createServer(app);
+const io = new Server(server);
 
-app.use(express.json())
+app.use(express.json());
+app.use(express.static(path.resolve("/public")));
 app.set("view engine", "ejs");
-app.set("views",path.resolve("./views"))
 
-io.on("connection",(socket)=>{
-   
-  console.log(socket.id)
-  socket.on('connectid', () => {
-    console.log('Received connectid event from client');
-    io.to(socket.id).emit('connectid', socket.id); 
-  });
-})
-app.get("/",(req,res)=>{
-    res.render("home")
-})
-app.get("/uuid",(req,res)=>{
-    res.redirect("/"+v4())
-})
-app.get("/:roomId",(req,res)=>{
-    res.render("room",{
-        roomId:req.params.roomId
-    })
-})
-app.listen(8000,()=>{
-    console.log("listening on 8000")
-})
+io.on("connect", (socket) => {
+    console.log(`A user connected with ID: ${socket.id}`);
+   socket.on('join-room',roomId=>{
+    let room=io.sockets.adapter.rooms.get(roomId);
+    let roomSize=0;
+    if(room){
+        roomSize=room.size
+    }
+    if(roomSize<2){
+        socket.join(roomId);
+        socket.broadcast.to(roomId).emit("user-connected");
+        socket.on("disconnect",()=>{
+            socket.broadcast.to(roomId).emit("user-disconnected");
+        })
+        socket.on('can-play',()=>{
+            socket.broadcast.to(roomId).emit("can-play");
+    
+        })
+    
+        socket.on("clicked",(id)=>{
+            socket.broadcast.to(roomId).emit("clicked",id);
+        })
+       
+    }else{
+        socket.emit('full-room');
+    }
 
+  
+   })
+    
+});
+
+app.get("/", (req, res) => {
+    res.render("home");
+});
+
+app.get("/uuid", (req, res) => {
+    res.redirect("/" + uuidv4());
+});
+
+app.get("/:roomId", (req, res) => {
+    res.render("room", {
+        roomId: req.params.roomId
+    });
+});
+
+server.listen(8000, () => {
+    console.log("Server listening on port 8000");
+});
